@@ -2,18 +2,50 @@ const express = require('express');
 const fs = require('fs');
 const app = express();
 
-app.use((req, res, next) => {
-// write your logging code here
 
+app.use((req, res, next) => {
+    const agent = req.get('user-agent').replaceAll(',', ':');
+    const method = req.method;
+    const resource = req.path;
+    const version = `HTTP/${req.httpVersion}`;
+    const time = new Date().toISOString();
+
+    res.on('finish', () => {
+        const line = `${agent},${time},${method},${resource},${version},${res.statusCode}\n`;
+        console.log(line);
+        fs.appendFile('log.csv',line, (err => {
+            if (err) console.error(err);
+        }));
+    });
+
+    next();
 });
 
 app.get('/', (req, res) => {
-// write your code to respond "ok" here
+    res.send('ok');
 
 });
 
 app.get('/logs', (req, res) => {
-// write your code to return a json object containing the log data here
+    fs.readFile('log.csv', 'utf8', (err,data) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: 'Unable to read logs'});
+        }
+
+        const lines = data.split('\n');
+        const headerKeys = lines[0].split(',');
+        const dataLines = lines.slice(1).filter((line) => line.length > 0);
+        const logs = dataLines.map((line) => {
+            const values = line.split(',');
+            return headerKeys.reduce((acc, key, i) => {
+                acc[key] = values[i];
+                return acc;
+            }, {});
+        });
+        res.json(logs);
+        
+    });
 
 });
 
