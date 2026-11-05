@@ -2,6 +2,11 @@ const express = require('express');
 const fs = require('fs');
 const app = express();
 
+// log.csv is git-ignored, so a fresh deploy has to create it with its header row.
+if (!fs.existsSync('log.csv')) {
+    fs.writeFileSync('log.csv', 'Agent,Time,Method,Resource,Version,Status\n');
+}
+
 
 app.use((req, res, next) => {
     const agent = req.get('user-agent').replaceAll(',', ':');
